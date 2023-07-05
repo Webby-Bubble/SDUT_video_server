@@ -1,0 +1,23 @@
+server:
+  port: 8002
+
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    virtual-host: email
+    username: WebbyBubble
+    password: 224514
+
+  mail:
+    host: smtp.qq.com
+    username: 714780629@qq.com
+    # 授权码
+    password: ilrbaklrnquwbdah
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true

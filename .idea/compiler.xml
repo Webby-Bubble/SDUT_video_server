@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="entity" />
+        <module name="cloud-gateway" />
+        <module name="cloud-feign" />
+        <module name="video-service" />
+        <module name="user-service" />
+        <module name="food-service" />
+        <module name="cloud-nacos-config" />
+        <module name="email-service" />
+        <module name="cloud-commons" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="cloud-commons" target="1.8" />
+      <module name="cloud-feign" target="1.8" />
+      <module name="cloud-gateway" target="1.8" />
+      <module name="cloud-nacos-config" target="1.8" />
+      <module name="email-service" target="1.8" />
+      <module name="entity" target="1.8" />
+      <module name="food-service" target="1.8" />
+      <module name="user-service" target="1.8" />
+      <module name="video-service" target="1.8" />
+      <module name="video-springcloud" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="cloud-commons" options="-parameters" />
+      <module name="cloud-feign" options="-parameters" />
+      <module name="cloud-gateway" options="-parameters" />
+      <module name="cloud-nacos-config" options="-parameters" />
+      <module name="email-service" options="-parameters" />
+      <module name="entity" options="-parameters" />
+      <module name="user-service" options="-parameters" />
+      <module name="video-service" options="-parameters" />
+    </option>
+  </component>
+</project>

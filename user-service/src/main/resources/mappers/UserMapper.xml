@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.etoak.mapper.UserMapper">
+
+    <sql id="userSql">
+        user_name,password,user_pic,user_cover,sex,content,age,openid,role,email,phone,status
+    </sql>
+
+    <select id="getUserByPhone" resultType="com.etoak.dto.UserDto">
+        select
+        uni_user.id, <include refid="userSql"></include>,uud.start_time as disableStartTime,uud.all_time as disableAllTime,uud.end_time as disableEndTime
+        from uni_user
+        left join uni_user_disable uud on uni_user.id = uud.user_id
+        where phone = #{value}
+    </select>
+
+    <select id="getUser" resultType="com.etoak.dto.UserDto">
+        select
+        uni_user.id, <include refid="userSql"></include>,uud.start_time as disableStartTime,uud.all_time as disableAllTime,uud.end_time as disableEndTime
+        from uni_user
+        left join uni_user_disable uud on uni_user.id = uud.user_id
+        where user_name = #{value}
+    </select>
+
+    <update id="updateUserInfo">
+        update uni_user set user_name = #{userName},user_pic = #{userPic},user_cover = #{userCover},
+        sex = #{sex},content = #{content},age = #{age} ,email = #{email},phone = #{phone}
+        where id = #{id}
+    </update>
+
+
+    <update id="updateUserPicOrUserCover" parameterType="User">
+        update uni_user
+        <set>
+            <if test="userPic != null and userPic != ''">
+                user_pic = #{userPic}
+            </if>
+            <if test="userCover != null and userCover != ''">
+                user_cover = #{userCover}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+
+    <!-- 查询用户所有的短视频id-->
+    <select id="getAllShortVideoByUserId" parameterType="int" resultType="int">
+        select id from uni_short_video where user_id = #{value}
+    </select>
+
+    <!--查询某个用户的所有关注或者粉丝-->
+    <select id="queryAllUsersByIds" parameterType="java.util.Set" resultType="com.etoak.dto.UserDto">
+        select id,user_name as userName,user_pic as userPic from uni_user
+        <where>
+            id in
+            <foreach collection="idList" item="id" separator="," open="(" close=")">
+                #{id}
+            </foreach>
+            <if test="userName != null and userName != ''">
+                and user_name like concat('%',#{userName},'%')
+            </if>
+        </where>
+
+    </select>
+
+    <!--查询所有用户信息-->
+    <select id="getAllUserList" parameterType="com.etoak.dto.UserDto" resultType="com.etoak.dto.UserDto">
+        select
+            uni_user.id, <include refid="userSql"></include>,uud.start_time as disableStartTime,uud.all_time as disableAllTime,uud.end_time as disableEndTime
+         from uni_user
+         left join uni_user_disable uud on uni_user.id = uud.user_id
+         <where>
+             <if test="userName != null and userName != ''">
+                 and   user_name like concat('%',#{userName},'%')
+             </if>
+             <if test="status != null">
+                 and status = #{status}
+             </if>
+         </where>
+    </select>
+
+    <!--封禁用户-->
+    <insert id="disableUser" >
+        insert into uni_user_disable (user_id,start_time,all_time,end_time)
+        <if test="allTime != -1">
+            values(
+            #{userId},now(),#{allTime},adddate(now(),interval #{allTime} day)
+            )
+        </if>
+        <if test="allTime == -1">
+            values(
+            #{userId},now(),#{allTime},null
+            )
+        </if>
+
+    </insert>
+    <!--更改用户状态-->
+    <update id="updateUserStatus">
+        update uni_user set status = #{status} where id = #{userId}
+    </update>
+
+    <!--删除用户封禁信息-->
+    <delete id="deleteUserDisable">
+        delete from uni_user_disable where user_id = #{value}
+    </delete>
+
+    <!--查询所有用户数量-->
+    <select id="getAllUserCount" resultType="int">
+        select  count(*) from uni_user
+    </select>
+</mapper>

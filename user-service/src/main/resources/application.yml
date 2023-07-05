@@ -1,0 +1,35 @@
+server:
+  port: 8881
+  servlet:
+    context-path: /rst-user
+spring:
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/uniapp?serverTimezone&useSSL=false
+    username: root
+    password: 224514
+  #rabbitMq
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    virtual-host: /email
+    username: WebbyBubble
+    password: 224514
+
+  application:
+    name: user-service
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        namespace: ae1a055e-cc74-4875-a3f0-feb15e1714db
+
+mybatis-plus:
+  mapper-locations: classpath:mappers/**/*.xml
+  type-aliases-package: com.etoak.entity
+
+logging:
+  level:
+    com.etoak.mapper: debug
+

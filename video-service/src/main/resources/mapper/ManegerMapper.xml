@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.etoak.mapper.ManagerMapper">
+
+    <update id="updateVisit" >
+        update uni_visit set visit_count = visit_count + 1 where id = 1
+    </update>
+
+    <select id="getAllVisitCount" resultType="int">
+        select visit_count from uni_visit
+    </select>
+
+    <select id="queryFiveDayPlayRank" parameterType="String" resultType="HashMap">
+      SELECT upc.video_id as videoId,sum(play_count) as playCount,play_time,uv.video_title as videoTitle FROM
+      uni_play_count upc
+      left join uni_video uv on  upc.video_id = uv.id
+      GROUP BY video_id  HAVING play_time BETWEEN DATE_SUB(now(),INTERVAL 5 DAY) and now() ORDER BY playCount DESC limit 0,3
+    </select>
+
+    <select id="queryCountOfVideoById" resultType="long">
+        select play_count from uni_play_count where video_id = #{videoId} and play_time = #{playTime}
+    </select>
+
+    <!-- 查询所有视频评论   -->
+    <resultMap id="talkeMap" type="VideoTalkeVo">
+        <id  property="id" column="id" ></id>
+        <result property="videoId" column="video_id"></result>
+        <result property="userId" column="user_id"></result>
+        <result property="videoTitle" column="video_title" javaType="String" ></result>
+        <result property="talkeContent" column="talke_content"></result>
+        <result property="publishTime" column="publish_time"></result>
+        <result property="userName" column="user_name"  javaType="String"></result>
+        <result property="userPic" column="user_pic"  javaType="String"></result>
+        <collection property="videoReplyList" select="com.etoak.mapper.VideoMapper.selectAllReply" column="talkeId = id"></collection>
+    </resultMap>
+    <select id="selectAllVideoTalkeAndReply"  resultMap="talkeMap">
+       select uvt.id, uvt.video_id,uvt.user_id,uvt.talke_content,uvt.publish_time,uu.user_name,uu.user_pic,uv.video_title
+       from uni_video_talke uvt
+       left join uni_user uu on uvt.user_id = uu.id
+       left join uni_video uv on uvt.video_id = uv.id
+       <where>
+           <if test="userName != '' and userName != null">
+                and user_name like concat('%',#{userName},'%')
+           </if>
+           <if test="videoTitle != '' and videoTitle != null">
+               and video_title like concat('%',#{videoTitle},'%')
+           </if>
+       </where>
+    </select>
+    <select id="selectAllReply" resultType="VideoReply">
+        select uvr.id, video_talke_id as videoTalkeId,user_id as userId,reply_content as replyContent,
+        reply_time as replyTime,rname ,uu.user_name as replyUserName,uu.user_pic as replyUserPic
+        from uni_video_reply uvr
+        left join uni_user uu
+        on uvr.user_id = uu.id
+        where video_talke_id = #{talkeId}
+    </select>
+
+    <update id="updateShortVideoStatus" >
+        update uni_short_video set video_status = #{videoStatus} where id = #{id}
+    </update>
+
+    <update id="examineResult" >
+        update uni_short_video set video_status = #{status} where id = #{id}
+    </update>
+</mapper>

@@ -1,0 +1,43 @@
+server:
+  port: 8803
+  servlet:
+    context-path: /rst-video
+
+spring:
+  application:
+    name: video-service
+
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/uniapp?serverTimezone&useSSL=false
+    username: root
+    password: 224514
+
+  #配置RabbitMQ
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    virtual-host: /email
+    username: sheng
+    password: 224514
+
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        namespace: ae1a055e-cc74-4875-a3f0-feb15e1714db
+
+mybatis-plus:
+  type-aliases-package: com.etoak
+
+
+ipPath:
+  path: http://192.168.221.189:9999
+
+

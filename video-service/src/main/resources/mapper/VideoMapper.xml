@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.etoak.mapper.VideoMapper">
+    <resultMap id="videoMap" type="Video">
+        <id property="id" column="id"></id>
+        <result property="videoTitle" column="video_title"></result>
+        <result property="videoCover" column="video_cover"></result>
+        <result property="videoPath" column="video_path"></result>
+        <result property="videoTypes" column="video_types"></result>
+        <result property="director" column="director"></result>
+        <result property="stars" column="stars"></result>
+        <result property="publishTime" column="publish_time"></result>
+        <result property="videoKind" column="video_kind"></result>
+        <result property="videoContent" column="video_content"></result>
+        <result property="videoStatus" column="video_status"></result>
+        <result property="doubanScore" column="douban_score"></result>
+        <collection property="videoChildrenList" select="com.etoak.mapper.VideoMapper.selectAllChildrenByVideoId" column="{videoId = id}"></collection>
+    </resultMap>
+    <select id="getVideos" parameterType="Video" resultMap="videoMap">
+        select uv.id,video_title,video_cover,video_path,video_types
+        ,director ,stars ,publish_time, video_kind,video_content,
+        video_status,douban_score
+
+        from uni_video uv
+        <where>
+            <if test="role != null and role == 0">
+                video_status = 1
+            </if>
+            <if test="videoKind != null and videoKind != 0">
+                and video_kind = #{videoKind}
+            </if>
+            <if test="videoTitle != null and videoTitle != ''">
+                and video_title like concat('%',#{videoTitle},'%')
+            </if>
+        </where>
+        <if test="zuixin != null and zuixin != ''">
+            order by publish_time DESC
+        </if>
+        <if test="pingFen != null and pingFen != ''">
+            order by douban_score DESC
+        </if>
+    </select>
+    <select id="selectAllChildrenByVideoId" resultType="VideoChildren">
+        select id,video_id as videoId,video_path as videoPath,video_Anthology as videoAnthology from uni_videochidrens where video_id = #{videoId}
+    </select>
+
+    <!-- 查询所有短视频   -->
+    <select id="queryAllShortVideo" parameterType="shortVideo" resultType="ShortVideoDto">
+        select usv.id,user_id as userId,video_path as videoPath,video_content as videoContent,
+        uu.user_name as userName,uu.user_pic as userPic,
+        ((select count(*) a from uni_short_video_talke t where t.short_video_id = usv.id)
+             +
+         (select count(*) a  from uni_short_video_reply r left JOIN uni_short_video_talke t on r.short_video_talke_id = t.id where t.short_video_id = usv.id )
+         ) talkeAndReplyCount,video_cover as videoCover,video_status as videoStatus
+        from uni_short_video usv
+        left join uni_user uu on usv.user_id = uu.id
+
+        <where>
+            <if test="videoContent != null and videoContent != ''">
+                and video_content like concat('%',#{videoContent},'%')
+            </if>
+            <if test="videoStatus != null">
+                and video_status = #{videoStatus}
+            </if>
+        </where>
+        order by usv.publish_time DESC
+    </select>
+
+    <!--添加举报信息-->
+    <insert id="addReport" parameterType="com.etoak.entity.ReportVo">
+        <selectKey resultType="Integer" keyProperty="id" order="AFTER">
+            select last_insert_id()
+        </selectKey>
+        insert  into uni_report (short_video_id,video_id,user_id,report_content,report_status,examine_status,create_time)
+        values(
+            #{shortVideoId},#{videoId},#{userId},#{reportContent},1,0,now()
+        )
+    </insert>
+    <insert id="addReportImgs" parameterType="com.etoak.entity.ReportVo">
+        insert  into uni_report_img (report_img,rid)
+        values
+        <foreach collection="reportImgs" item="img" separator=",">
+            (#{img},#{id})
+        </foreach>
+    </insert>
+
+    <select id="queryAllReportInfoByStatus" resultType="com.etoak.dto.ReportDto">
+       SELECT
+            ur.id,
+            short_video_id AS shortVideoId,
+            video_id AS videoId,
+            ur.user_id AS userId,
+            report_content AS reportContent,
+            report_status AS reportStatus,
+            IFNULL(usv.video_content,uv.video_title) as videoTitle,
+            examine_status as examineStatus,
+            examine_content as examineContent,
+            IFNULL(usv.video_cover,uv.video_cover) as videoCover
+        FROM
+            uni_report ur
+        LEFT JOIN uni_short_video usv ON ur.short_video_id = usv.id
+        LEFT JOIN uni_video uv ON uv.id = ur.video_id
+        where ur.user_id = #{userId} and report_status = #{reportStatus}
+    </select>
+
+
+    <resultMap id="reportMap" type="com.etoak.dto.ReportDto">
+        <id column="id" property="id"></id>
+        <result column="shortVideoId" property="shortVideoId"></result>
+        <result column="videoId" property="videoId"></result>
+        <result column="userId" property="userId"></result>
+        <result column="reportContent" property="reportContent"></result>
+        <result column="reportStatus" property="reportStatus"></result>
+        <result column="videoTitle" property="videoTitle"></result>
+        <result column="examineStatus" property="examineStatus"></result>
+        <result column="examineContent" property="examineContent"></result>
+        <result column="reportUserName" property="reportUserName"></result>
+        <result column="createTime" property="createTime"></result>
+        <result column="endTime" property="endTime"></result>
+        <collection property="reportImgs" select="com.etoak.mapper.VideoMapper.queryAllReportImgs" column="{rid=id}"></collection>
+    </resultMap>
+
+    <select id="queryAllReportInfoList" parameterType="com.etoak.entity.Report" resultMap="reportMap">
+        SELECT
+            ur.id,
+            short_video_id AS shortVideoId,
+            video_id AS videoId,
+            ur.user_id AS userId,
+            report_content AS reportContent,
+            report_status AS reportStatus,
+            IFNULL(usv.video_content,uv.video_title) as videoTitle,
+            examine_status as examineStatus,
+            examine_content as examineContent,
+            uu.user_name as reportUserName,
+            IFNULL(usv.video_path,uv.video_path) as videoPath,
+            create_time as createTime,
+            end_time as endTime
+        FROM
+            uni_report ur
+        LEFT JOIN uni_short_video usv ON ur.short_video_id = usv.id
+        LEFT JOIN uni_video uv ON uv.id = ur.video_id
+        LEFT JOIN uni_user uu ON uu.id = ur.user_id
+    </select>
+
+    <select id="queryAllReportImgs" resultType="string">
+        select  report_img from uni_report_img where rid = #{rid}
+    </select>
+
+
+    <update id="updateReportExamine" parameterType="com.etoak.entity.Report">
+        update uni_report set report_status = #{reportStatus},examine_content = #{examineContent},examine_status = #{examineStatus},end_time = now()
+        where id = #{id}
+    </update>
+
+
+    <select id="queryAllMyShortVideoList" resultType="com.etoak.dto.ShortVideoDto">
+         select usv.id,user_id as userId,video_path as videoPath,video_content as videoContent,
+        uu.user_name as userName,uu.user_pic as userPic,
+        ((select count(*) a from uni_short_video_talke t where t.short_video_id = usv.id)
+             +
+         (select count(*) a  from uni_short_video_reply r left JOIN uni_short_video_talke t on r.short_video_talke_id = t.id where t.short_video_id = usv.id )
+         ) talkeAndReplyCount,video_cover as videoCover,video_status as videoStatus
+        from uni_short_video usv
+        left join uni_user uu on usv.user_id = uu.id
+        where user_id = #{userId}
+
+        order by usv.publish_time DESC
+    </select>
+
+    <!--添加短视频-->
+    <insert id="addVideo" parameterType="ShortVideo">
+        insert  into uni_short_video(user_id,video_path,video_content,publish_time,video_status,video_cover)
+        values(
+            #{userId},#{videoPath},#{videoContent},now(),1,#{videoCover}
+        )
+    </insert>
+
+
+    <!-- 查询短视频评论   -->
+    <resultMap id="shortTalkeMap" type="ShortVideoTalkeVo">
+        <id  property="id" column="id" ></id>
+        <result property="shortVideoId" column="short_video_id"></result>
+        <result property="userId" column="user_id"></result>
+        <result property="shortTalkeContent" column="short_talke_content"></result>
+        <result property="publishTime" column="publish_time"></result>
+        <result property="userName" column="user_name"></result>
+        <result property="userPic" column="user_pic"></result>
+        <collection property="shortVideoReplyList" select="com.etoak.mapper.VideoMapper.selectAllShortReply" column="shortVideoTalkeId = id"></collection>
+    </resultMap>
+    <select id="selectAllShortVideoTalkeAndReply" parameterType="ShortVideo" resultMap="shortTalkeMap">
+       select usvt.id, short_video_id,user_id,short_talke_content,publish_time,uu.user_name,uu.user_pic
+       from uni_short_video_talke usvt
+       left join uni_user uu
+       on usvt.user_id = uu.id
+       where short_video_id = #{id}
+    </select>
+    <select id="selectAllShortReply" resultType="ShortVideoReply">
+        select usvr.id, short_video_talke_id as shortVideoTalkeId,user_id as userId,short_reply_content as shortReplyContent,
+        reply_time as replyTime,rname ,uu.user_name as shortReplyUserName,uu.user_pic as shortReplyUserPic
+        from uni_short_video_reply usvr
+        left join uni_user uu
+        on usvr.user_id = uu.id
+        where short_video_talke_id = #{shortVideoTalkeId}
+    </select>
+
+    <!--    添加评论-->
+    <insert id="addTalke" parameterType="VideoTalke">
+        insert  into uni_video_talke(video_id,user_id,talke_content,publish_time)
+        values(
+            #{videoId},#{userId},#{talkeContent},now()
+        )
+    </insert>
+    <insert id="addReply" parameterType="VideoReply">
+        insert  into uni_video_reply (video_talke_id,user_id,reply_content,rname,reply_time)
+        values(
+            #{videoTalkeId},#{userId},#{replyContent},#{rname},now()
+        )
+    </insert>
+    <!-- 查询视频评论   -->
+    <resultMap id="talkeMap" type="com.etoak.entity.VideoTalkeVo">
+        <id  property="id" column="id" ></id>
+        <result property="videoId" column="video_id"></result>
+        <result property="userId" column="user_id"></result>
+        <result property="talkeContent" column="talke_content"></result>
+        <result property="publishTime" column="publish_time"></result>
+        <result property="userName" column="user_name"></result>
+        <result property="userPic" column="user_pic"></result>
+        <collection property="videoReplyList" select="com.etoak.mapper.VideoMapper.selectAllReply" column="{talkeId = id}"></collection>
+    </resultMap>
+    <select id="selectAllVideoTalkeAndReply" parameterType="com.etoak.entity.Video" resultMap="talkeMap">
+       select uvt.id, video_id,user_id,talke_content,publish_time,uu.user_name,uu.user_pic
+
+       from uni_video_talke uvt
+       left join uni_user uu
+       on uvt.user_id = uu.id
+       where video_id = #{id}
+    </select>
+    <select id="selectAllReply" resultType="com.etoak.entity.VideoReply">
+        select uvr.id, video_talke_id as videoTalkeId,user_id as userId,reply_content as replyContent,
+        reply_time as replyTime,rname ,uu.user_name as replyUserName,uu.user_pic as replyUserPic
+        from uni_video_reply uvr
+        left join uni_user uu
+        on uvr.user_id = uu.id
+        where video_talke_id = #{talkeId}
+    </select>
+
+
+
+    <!--添加短视频评论-->
+    <insert id="addShortVideoTalke" parameterType="ShortVideoTalke">
+        insert into uni_short_video_talke (short_video_id,user_id,short_talke_content,publish_time)
+        values(
+            #{shortVideoId},#{userId},#{shortTalkeContent},now()
+        )
+    </insert>
+    <!--添加短视频的回复-->
+    <insert id="addShortVideoReply" parameterType="ShortVideoTalke">
+        insert into uni_short_video_reply (short_video_talke_id,user_id,short_reply_content,reply_time,rname)
+        values(
+            #{shortVideoTalkeId},#{userId},#{shortReplyContent},now(),#{rname}
+        )
+    </insert>
+
+    <!--修改短视频的状态违规-->
+    <update id="updateShortVideoById">
+        update uni_short_video set video_status = #{videoStatus} where id = #{shortVideoId}
+    </update>
+
+
+    <!--修改影视的状态下架-->
+    <update id="updateVideoById">
+        update uni_video set video_status = #{videoStatus} where id = #{videoId}
+    </update>
+
+
+    <select id="queryReportResultByid" parameterType="integer" resultType="com.etoak.dto.ReportDto">
+        select
+            ur.id,report_content as reportContent,report_status as reportStatus,examine_status as examineStatus,
+            examine_content as examineContent,create_time as createTime,end_time as endTime ,IFNULL(uv.video_title,usv.video_content) as videoTitle
+        from uni_report ur
+        left join uni_video uv on uv.id = ur.video_id
+        left join uni_short_video usv on usv.id = ur.short_video_id
+        where ur.id = #{value}
+    </select>
+
+    <!--查询某个用户的所有收藏-->
+    <select id="queryMyShouCang" parameterType="int" resultType="Video">
+        select id,video_title as videoTitle,video_cover as videoCover,publish_time as publishTime
+        from uni_video where id in (select video_id from uni_shoucang where user_id = #{userId})
+    </select>
+
+    <!--添加收藏-->
+    <insert id="addShouCang" >
+        insert into uni_shoucang (video_id,user_id)
+        values(
+            #{videoId},#{userId}
+        )
+    </insert>
+
+    <!---->
+    <select id="queryShouCangByUserIdAndVideoId"  resultType="int">
+        select count(*) from uni_shoucang where user_id = #{param1} and video_id = #{param2}
+    </select>
+
+
+    <!--添加接口数据-->
+    <insert id="addVideoPlus" parameterType="list">
+        insert  into uni_video (id,video_title,video_cover,director,publish_time,
+        video_kind,video_types,video_content,stars,video_path,video_status,douban_score)
+        values
+        <foreach collection="videoList" item="video" separator=",">
+            (
+            #{video.id},#{video.videoTitle},#{video.videoCover},
+            #{video.director},#{video.publishTime},#{video.videoKind},
+            #{video.videoTypes},#{video.videoContent},#{video.stars},#{video.videoPath},
+            1,#{video.doubanScore}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 添加每条电视剧的   -->
+    <insert id="addVideoChildrens" >
+        insert into uni_videochidrens (video_id,video_path,video_Anthology)
+        values
+        <foreach collection="urls" index="index" item="videoPath" separator=",">
+            (#{id},#{videoPath},#{index} + 1)
+        </foreach>
+    </insert>
+
+
+    <!--查询所有影视总数量-->
+    <select id="getAllVideoCount" resultType="long">
+        select count(*) from uni_video left join uni_videoChidrens on uni_video.id = uni_videoChidrens.video_id
+    </select>
+
+    <!--查询所有短视频总数量-->
+    <select id="getAllShortVideoCount" resultType="long">
+        select count(*) from uni_short_video
+    </select>
+
+    <update id="updateVideoCover" >
+        update uni_video set video_cover = #{videoCover} where id = #{videoId}
+    </update>
+
+    <!--更新影视数据-->
+    <update id="updateVideo" parameterType="com.etoak.entity.Video">
+        update uni_video
+        <set>
+            <if test="videoTitle != null and videoTitle != ''">
+                video_title = #{videoTitle},
+            </if>
+            <if test="videoTypes != null and videoTypes != '' ">
+                video_types = #{videoTypes},
+            </if>
+            <if test="director != null and director != ''">
+                director = #{director},
+            </if>
+            <if test="stars != null and stars != ''">
+                stars = #{stars},
+            </if>
+            <if test="publishTime != null and publishTime != ''">
+                publish_time = #{publishTime},
+            </if>
+            <if test="videoContent != null and videoContent != ''">
+                video_content = #{videoContent},
+            </if>
+            <if test="videoStatus != null">
+                video_status = #{videoStatus},
+            </if>
+            <if test="videoKind != null">
+                video_kind = #{videoKind},
+            </if>
+
+        </set>
+        where id = #{id}
+    </update>
+
+    <update id="videoChildren" parameterType="com.etoak.entity.VideoChildren">
+        update uni_videochidrens set video_path = #{videoPath} where id = #{id}
+    </update>
+
+
+    <!--添加搜索记录信息-->
+    <insert id="addHistory" parameterType="com.etoak.entity.History">
+        insert into uni_query_history (history_name,create_time) values(#{historyName},now())
+    </insert>
+
+    <!--查询是否存在搜索记录-->
+    <select id="queryHistoryByHistoryName" parameterType="history" resultType="string">
+        select history_name from uni_query_history where history_name = #{historyName}
+    </select>
+
+    <!--查询所有搜索记录-->
+    <select id="queryAllHistoryName" resultType="string">
+        select history_name from uni_query_history order by create_time DESC
+    </select>
+
+    <!--删除搜索记录-->
+    <delete id="deleteHistory" parameterType="string">
+        delete from uni_query_history
+        <where>
+            <if test="historyName != null and historyName != ''">
+                history_name = #{historyName}
+            </if>
+        </where>
+    </delete>
+</mapper>

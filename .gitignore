@@ -1,0 +1,9 @@
+# 项目排除路径
+/cloud-commons/target/
+/cloud-feign/target/
+/cloud-gateway/target/
+/cloud-nacos-config/target/
+/email-service/target/
+/entity/target/
+/user-service/target/
+/video-service/target/
